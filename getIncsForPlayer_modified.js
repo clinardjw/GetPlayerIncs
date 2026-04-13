@@ -624,18 +624,35 @@ window.twSDK = {
     },
     formatDateTime: function (dateTime) {
         dateTime = new Date(dateTime);
+
+        // Derive the server's UTC offset by comparing the game's displayed clock
+        // against what UTC thinks the time is right now. This automatically
+        // handles DST changes without hardcoding any offset value.
+        const serverTimeStr = this.getServerDateTime(); // "yyyy-mm-dd hh:mm:ss"
+        // Append 'Z' to force parsing as UTC, preventing the browser from
+        // applying its own local timezone offset to the server time string.
+        const serverNow = new Date(serverTimeStr + 'Z');
+        const utcNow = new Date();
+        // Offset in ms = difference between what the server clock shows and true UTC
+        const serverOffsetMs = serverNow.getTime() - utcNow.getTime();
+        // Round to nearest hour to avoid sub-minute drift from page load lag
+        const serverOffsetMsRounded = Math.round(serverOffsetMs / 3600000) * 3600000;
+
+        // Apply the offset to the epoch timestamp so we display server-local time
+        const adjusted = new Date(dateTime.getTime() + serverOffsetMsRounded);
+
         return (
-            this.zeroPad(dateTime.getDate(), 2) +
+            this.zeroPad(adjusted.getUTCDate(), 2) +
             '/' +
-            this.zeroPad(dateTime.getMonth() + 1, 2) +
+            this.zeroPad(adjusted.getUTCMonth() + 1, 2) +
             '/' +
-            dateTime.getFullYear() +
+            adjusted.getUTCFullYear() +
             ' ' +
-            this.zeroPad(dateTime.getHours(), 2) +
+            this.zeroPad(adjusted.getUTCHours(), 2) +
             ':' +
-            this.zeroPad(dateTime.getMinutes(), 2) +
+            this.zeroPad(adjusted.getUTCMinutes(), 2) +
             ':' +
-            this.zeroPad(dateTime.getSeconds(), 2)
+            this.zeroPad(adjusted.getUTCSeconds(), 2)
         );
     },
     frequencyCounter: function (array) {
